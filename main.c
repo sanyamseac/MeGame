@@ -113,6 +113,7 @@ int main(void) {
         // Update
         if (IsKeyPressed(KEY_ENTER)) 
         {
+            CloseWindow();
             RunGame(); // Call the game function from play.c
         }
 
