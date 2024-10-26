@@ -1,9 +1,11 @@
 #include "raylib.h"
 #include <stdlib.h> // For rand() and srand()
+#include <math.h>   // For atan2f()
 #include <time.h>   // For time()
 
 #define MAX_COINS 50
 #define PLAYER_SPEED 0.025f // Define player speed for lerp
+#define ROTATION_SPEED 0.06f // Define rotation speed for lerp
 
 // Structure for coins
 typedef struct Coin {
@@ -19,12 +21,14 @@ typedef struct Player {
     Texture2D textures[4];
     Texture2D currentTexture;
     bool canCollectCoins;
+    float rotation; // Rotation angle for visibility cone
+    float targetRotation; // Target rotation angle for visibility cone
 } Player;
 
 // Function declarations
-void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Sound *coinSound, int playerChoice);
+void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D *visibilityCone, Texture2D candyTextures[], Sound *coinSound, int playerChoice);
 void UpdateGame(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Sound coinSound);
-void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle);
+void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D visibilityCone);
 void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[]);
 void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize);
 void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSound);
@@ -32,6 +36,7 @@ void DrawBoundary(int boundarySize);
 void DrawCoins(Coin coins[]);
 void DrawPlayer(Player player);
 void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibilityCircle);
+void DrawPlayerCone(Vector2 playerPosition, float rotation, Texture2D visibilityCone);
 int ShowMenu(int screenWidth, int screenHeight);
 
 void RunGame(void)
@@ -47,6 +52,7 @@ void RunGame(void)
     Coin coins[MAX_COINS] = { 0 };
     int score = 0;
     Texture2D visibilityCircle;
+    Texture2D visibilityCone;
     Texture2D candyTextures[3];
     Sound coinSound;
 
@@ -54,7 +60,7 @@ void RunGame(void)
 
     int playerChoice = ShowMenu(screenWidth, screenHeight);
 
-    InitGame(screenWidth, screenHeight, boundarySize, &mainChar, &ghost, &camera, coins, &score, &visibilityCircle, candyTextures, &coinSound, playerChoice);
+    InitGame(screenWidth, screenHeight, boundarySize, &mainChar, &ghost, &camera, coins, &score, &visibilityCircle, &visibilityCone, candyTextures, &coinSound, playerChoice);
 
     Player *player = (playerChoice == 0) ? &mainChar : &ghost;
 
@@ -64,11 +70,12 @@ void RunGame(void)
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
         UpdateGame(player, &camera, screenWidth, screenHeight, boundarySize, coins, &score, coinSound);
-        DrawGame(player, camera, boundarySize, coins, score, screenWidth, visibilityCircle);
+        DrawGame(player, camera, boundarySize, coins, score, screenWidth, visibilityCircle, visibilityCone);
     }
 
     // De-Initialization
     UnloadTexture(visibilityCircle); // Unload texture
+    UnloadTexture(visibilityCone); // Unload cone texture
     for (int i = 0; i < 3; i++) {
         UnloadTexture(candyTextures[i]); // Unload candy textures
     }
@@ -103,7 +110,7 @@ int ShowMenu(int screenWidth, int screenHeight)
     return choice;
 }
 
-void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Sound *coinSound, int playerChoice)
+void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D *visibilityCone, Texture2D candyTextures[], Sound *coinSound, int playerChoice)
 {
     InitAudioDevice(); // Initialize audio device
     SetMasterVolume(1.0f); // Set the master volume to maximum
@@ -129,6 +136,8 @@ void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainC
     mainChar->textures[3] = LoadTexture("assets/Characters/Main_Char_Still_after_Right.png");
     mainChar->currentTexture = mainChar->textures[2]; // Initial texture
     mainChar->canCollectCoins = true;
+    mainChar->rotation = 0.0f;
+    mainChar->targetRotation = 0.0f;
 
     // Load ghost textures
     ghost->textures[0] = LoadTexture("assets/Characters/G_Left.png");
@@ -137,6 +146,8 @@ void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainC
     ghost->textures[3] = LoadTexture("assets/Characters/G_Still_after_right.png");
     ghost->currentTexture = ghost->textures[2]; // Initial texture
     ghost->canCollectCoins = false;
+    ghost->rotation = 0.0f;
+    ghost->targetRotation = 0.0f;
 
     // Initialize coins at random positions
     InitCoins(coins, boundarySize, candyTextures);
@@ -145,6 +156,9 @@ void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainC
 
     // Load visibility circle texture
     *visibilityCircle = LoadTexture("assets/Others/BlackVisibilityCircle.png");
+
+    // Load visibility cone texture
+    *visibilityCone = LoadTexture("assets/Others/BlackVisibilityCone.png");
 
     // Load coin sound
     *coinSound = LoadSound("assets/audio/game-bonus.mp3");
@@ -198,6 +212,10 @@ void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int
         player->targetPosition = GetMousePosition();
         player->targetPosition.x += camera->target.x - screenWidth / 2;
         player->targetPosition.y += camera->target.y - screenHeight / 2;
+
+        // Calculate the angle between the current position and the target position
+        Vector2 direction = { player->targetPosition.x - player->position.x, player->targetPosition.y - player->position.y };
+        player->targetRotation = atan2f(direction.y, direction.x) * (180.0f / PI);
     }
 
     // Lerp player position towards target position
@@ -235,6 +253,9 @@ void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int
             player->currentTexture = player->textures[3]; // Standing still after moving right
         }
     }
+
+    // Lerp rotation towards target rotation
+    player->rotation += (player->targetRotation - player->rotation) * ROTATION_SPEED;
 }
 
 void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSound)
@@ -252,7 +273,7 @@ void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSou
     }
 }
 
-void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle)
+void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D visibilityCone)
 {
     BeginDrawing();
     ClearBackground(DARKGRAY);
@@ -268,14 +289,22 @@ void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], i
     // Draw player
     DrawPlayer(*player);
 
-    // Draw thin black circle around the player
-    float radius = 15 * (150 + (score * (screenWidth / 2 - 150) / MAX_COINS));
-    DrawPlayerCircle(player->position, radius, visibilityCircle);
+    // Draw visibility circle or cone based on player type
+    if (player->canCollectCoins) {
+        float radius = 15 * (150 + (score * (screenWidth / 2 - 150) / MAX_COINS));
+        DrawPlayerCircle(player->position, radius, visibilityCircle);
+    } else {
+        DrawPlayerCone(player->position, player->rotation, visibilityCone);
+    }
 
     EndMode2D();
-
     // Draw score
-    DrawText(TextFormat("Score: %d", score), 10, 10, 20, WHITE);
+    static Texture2D candyIcon = { 0 };
+    if (candyIcon.id == 0) {
+        candyIcon = LoadTexture("assets/Props/Candy_3.png");
+    }
+    DrawTextureEx(candyIcon, (Vector2){37, 30}, 180.0f, 0.1f, WHITE); // Scale down by 0.1 (10 times smaller)
+    DrawText(TextFormat("Candies Left: %d", MAX_COINS - score), 40, 10, 20, WHITE);
 
     EndDrawing();
 }
@@ -312,6 +341,18 @@ void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibility
         (Rectangle){ playerPosition.x, playerPosition.y, radius * 2, radius * 2},
         (Vector2){ radius, radius },
         0.0f,
+        WHITE
+    );
+}
+
+void DrawPlayerCone(Vector2 playerPosition, float rotation, Texture2D visibilityCone)
+{
+    DrawTexturePro(
+        visibilityCone,
+        (Rectangle){ 0, 0, visibilityCone.width, visibilityCone.height },
+        (Rectangle){ playerPosition.x, playerPosition.y, visibilityCone.width, visibilityCone.height},
+        (Vector2){ visibilityCone.width / 2, visibilityCone.height / 2 },
+        rotation,
         WHITE
     );
 }
