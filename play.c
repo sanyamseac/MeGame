@@ -1,81 +1,35 @@
 #include "raylib.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <pthread.h>
+#include <stdlib.h> // For rand() and srand()
+#include <time.h>   // For time()
 
-<<<<<<< Updated upstream
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 8080
-#define MAX_PLAYERS 10
-=======
 #define MAX_COINS 50
->>>>>>> Stashed changes
 
-typedef struct Player {
+// Structure for coins
+typedef struct Coin {
     Vector2 position;
-<<<<<<< Updated upstream
-    Color color;
-    int upKey;
-    int downKey;
-    int leftKey;
-    int rightKey;
-} Player;
-
-int client_socket;
-Player localPlayer;
-Player remotePlayers[MAX_PLAYERS];
-int numRemotePlayers = 0;
-=======
     bool collected;
     Texture2D texture;
 } Coin;
 
 // Function declarations
-void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *playerPosition, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[]);
-void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score);
-void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle);
+void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *playerPosition, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Texture2D playerTextures[]);
+void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Texture2D playerTextures[], Texture2D *currentPlayerTexture);
+void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D currentPlayerTexture);
 void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[]);
-void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize);
+void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Texture2D playerTextures[], Texture2D *currentPlayerTexture);
 void CheckCoinCollisions(Vector2 playerPosition, Coin coins[], int *score);
 void DrawBoundary(int boundarySize);
 void DrawCoins(Coin coins[]);
+void DrawPlayer(Vector2 playerPosition, Texture2D currentPlayerTexture);
 void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibilityCircle);
->>>>>>> Stashed changes
 
-void *receive_data(void *arg) {
-    char buffer[1024];
-    while (1) {
-        int bytes_received = recv(client_socket, buffer, sizeof(buffer), 0);
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
-            int playerIndex;
-            float posX, posY;
-            sscanf(buffer, "%d %f %f", &playerIndex, &posX, &posY);
-            if (playerIndex >= 0 && playerIndex < MAX_PLAYERS) {
-                remotePlayers[playerIndex].position.x = posX;
-                remotePlayers[playerIndex].position.y = posY;
-            }
-        }
-    }
-    return NULL;
-}
-
-void RunGame(void) {
+void RunGame(void)
+{
     // Initialization
-    const int screenWidth = 1920;
-    const int screenHeight = 1080;
+    const int screenWidth = 720;
+    const int screenHeight = 720;
+    const int boundarySize = 2000; // Size of the boundaries
 
-<<<<<<< Updated upstream
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - multiplayer");
-
-    localPlayer = (Player){{(float)screenWidth / 4, (float)screenHeight / 2}, RED, KEY_W, KEY_S, KEY_A, KEY_D};
-    for (int i = 0; i < MAX_PLAYERS; i++) {
-        remotePlayers[i] = (Player){{0, 0}, BLUE, 0, 0, 0, 0};
-    }
-=======
     Vector2 playerPosition = { 0 };
     Vector2 targetPosition = { 0 };
     Camera2D camera = { 0 };
@@ -83,57 +37,20 @@ void RunGame(void) {
     int score = 0;
     Texture2D visibilityCircle;
     Texture2D candyTextures[3];
+    Texture2D playerTextures[4];
+    Texture2D currentPlayerTexture;
 
-    InitGame(screenWidth, screenHeight, boundarySize, &playerPosition, &camera, coins, &score, &visibilityCircle, candyTextures);
+    InitGame(screenWidth, screenHeight, boundarySize, &playerPosition, &camera, coins, &score, &visibilityCircle, candyTextures, playerTextures);
     targetPosition = playerPosition;
->>>>>>> Stashed changes
+    currentPlayerTexture = playerTextures[2]; // Initial player texture (standing still after moving left)
 
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
-
-    // Connect to server
-    struct sockaddr_in server_addr;
-    client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(SERVER_PORT);
-    inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr);
-
-    connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr));
-
-    pthread_t receive_thread;
-    pthread_create(&receive_thread, NULL, receive_data, NULL);
 
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
-<<<<<<< Updated upstream
-        // Update
-        if (IsKeyDown(localPlayer.rightKey)) localPlayer.position.x += 2.0f;
-        if (IsKeyDown(localPlayer.leftKey)) localPlayer.position.x -= 2.0f;
-        if (IsKeyDown(localPlayer.upKey)) localPlayer.position.y -= 2.0f;
-        if (IsKeyDown(localPlayer.downKey)) localPlayer.position.y += 2.0f;
-
-        // Send player position to server
-        char buffer[1024];
-        sprintf(buffer, "%d %f %f", 0, localPlayer.position.x, localPlayer.position.y); // Assuming local player is player 0
-        send(client_socket, buffer, strlen(buffer), 0);
-
-        // Draw
-        BeginDrawing();
-
-        ClearBackground(DARKGRAY);
-
-        DrawCircleV(localPlayer.position, 20, localPlayer.color); // Draw local player
-        for (int i = 0; i < MAX_PLAYERS; i++) {
-            if (remotePlayers[i].position.x != 0 || remotePlayers[i].position.y != 0) {
-                DrawCircleV(remotePlayers[i].position, 20, remotePlayers[i].color); // Draw remote players
-            }
-        }
-
-        EndDrawing();
-=======
-        UpdateGame(&playerPosition, &targetPosition, &camera, screenWidth, screenHeight, boundarySize, coins, &score);
-        DrawGame(playerPosition, camera, boundarySize, coins, score, screenWidth, visibilityCircle);
->>>>>>> Stashed changes
+        UpdateGame(&playerPosition, &targetPosition, &camera, screenWidth, screenHeight, boundarySize, coins, &score, playerTextures, &currentPlayerTexture);
+        DrawGame(playerPosition, camera, boundarySize, coins, score, screenWidth, visibilityCircle, currentPlayerTexture);
     }
 
     // De-Initialization
@@ -141,13 +58,13 @@ void RunGame(void) {
     for (int i = 0; i < 3; i++) {
         UnloadTexture(candyTextures[i]); // Unload candy textures
     }
+    for (int i = 0; i < 4; i++) {
+        UnloadTexture(playerTextures[i]); // Unload player textures
+    }
     CloseWindow(); // Close window and OpenGL context
-<<<<<<< Updated upstream
-    close(client_socket);
-=======
 }
 
-void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *playerPosition, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[])
+void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *playerPosition, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Texture2D playerTextures[])
 {
     InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
 
@@ -163,6 +80,12 @@ void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *play
     candyTextures[0] = LoadTexture("assets/Candy_1.png");
     candyTextures[1] = LoadTexture("assets/Candy_2.png");
     candyTextures[2] = LoadTexture("assets/Candy_3.png");
+
+    // Load player textures
+    playerTextures[0] = LoadTexture("assets/G_Left.png");
+    playerTextures[1] = LoadTexture("assets/G_Right.png");
+    playerTextures[2] = LoadTexture("assets/G_Still_after_left.png");
+    playerTextures[3] = LoadTexture("assets/G_Still_after_right.png");
 
     // Initialize coins at random positions
     InitCoins(coins, boundarySize, candyTextures);
@@ -183,10 +106,10 @@ void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[])
     }
 }
 
-void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score)
+void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Texture2D playerTextures[], Texture2D *currentPlayerTexture)
 {
     // Update player position
-    UpdatePlayerPosition(playerPosition, targetPosition, camera, screenWidth, screenHeight, boundarySize);
+    UpdatePlayerPosition(playerPosition, targetPosition, camera, screenWidth, screenHeight, boundarySize, playerTextures, currentPlayerTexture);
 
     // Lerp camera to follow the player with some offset
     camera->target.x += (playerPosition->x - camera->target.x) * 0.1f;
@@ -202,8 +125,11 @@ void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *came
     CheckCoinCollisions(*playerPosition, coins, score);
 }
 
-void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize)
+void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Texture2D playerTextures[], Texture2D *currentPlayerTexture)
 {
+    static bool movingLeft = false;
+    static bool movingRight = false;
+
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
     {
         *targetPosition = GetMousePosition();
@@ -212,6 +138,7 @@ void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Came
     }
 
     // Lerp player position towards target position
+    float prevX = playerPosition->x;
     playerPosition->x += (targetPosition->x - playerPosition->x) * 0.1f;
     playerPosition->y += (targetPosition->y - playerPosition->y) * 0.1f;
 
@@ -220,6 +147,31 @@ void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Came
     if (playerPosition->y < 10) playerPosition->y = 10;
     if (playerPosition->x > boundarySize - 10) playerPosition->x = boundarySize - 10;
     if (playerPosition->y > boundarySize - 10) playerPosition->y = boundarySize - 10;
+
+    // Update player texture based on movement
+    if (playerPosition->x < prevX)
+    {
+        *currentPlayerTexture = playerTextures[0]; // Moving left
+        movingLeft = true;
+        movingRight = false;
+    }
+    else if (playerPosition->x > prevX)
+    {
+        *currentPlayerTexture = playerTextures[1]; // Moving right
+        movingLeft = false;
+        movingRight = true;
+    }
+    else
+    {
+        if (movingLeft)
+        {
+            *currentPlayerTexture = playerTextures[2]; // Standing still after moving left
+        }
+        else if (movingRight)
+        {
+            *currentPlayerTexture = playerTextures[3]; // Standing still after moving right
+        }
+    }
 }
 
 void CheckCoinCollisions(Vector2 playerPosition, Coin coins[], int *score)
@@ -234,7 +186,7 @@ void CheckCoinCollisions(Vector2 playerPosition, Coin coins[], int *score)
     }
 }
 
-void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle)
+void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D currentPlayerTexture)
 {
     BeginDrawing();
     ClearBackground(DARKGRAY);
@@ -247,7 +199,8 @@ void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin co
     // Draw coins
     DrawCoins(coins);
 
-    DrawCircleV(playerPosition, 20, RED); // Draw player character as a red circle
+    // Draw player character
+    DrawPlayer(playerPosition, currentPlayerTexture);
 
     // Draw thin black circle around the player
     float radius = 15*(150 + (score * (screenWidth / 2 - 150) / MAX_COINS));
@@ -259,7 +212,6 @@ void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin co
     DrawText(TextFormat("Score: %d", score), 10, 10, 20, WHITE);
 
     EndDrawing();
->>>>>>> Stashed changes
 }
 
 void DrawBoundary(int boundarySize)
@@ -279,6 +231,11 @@ void DrawCoins(Coin coins[])
             DrawTextureEx(coins[i].texture, coins[i].position, 0.0f, 0.1f, WHITE); // Scale down by 0.1 (10 times smaller)
         }
     }
+}
+
+void DrawPlayer(Vector2 playerPosition, Texture2D currentPlayerTexture)
+{
+    DrawTextureEx(currentPlayerTexture, (Vector2){playerPosition.x - currentPlayerTexture.width * 0.1f / 2, playerPosition.y - currentPlayerTexture.height * 0.1f / 2}, 0.0f, 0.1f, WHITE); // Scale down by 0.1 (10 times smaller)
 }
 
 void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibilityCircle)
