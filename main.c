@@ -24,6 +24,7 @@ int main(void)
 
         if (buttonHovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
         {
+            CloseWindow();
             RunGame(); // Call the game function from play.c
         }
 
