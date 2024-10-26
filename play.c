@@ -149,13 +149,13 @@ void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Came
     if (playerPosition->y > boundarySize - 10) playerPosition->y = boundarySize - 10;
 
     // Update player texture based on movement
-    if (playerPosition->x < prevX)
+    if (abs(playerPosition->x - prevX) < 5)
     {
         *currentPlayerTexture = playerTextures[0]; // Moving left
         movingLeft = true;
         movingRight = false;
     }
-    else if (playerPosition->x > prevX)
+    else if (abs(playerPosition->x - prevX) < 5)
     {
         *currentPlayerTexture = playerTextures[1]; // Moving right
         movingLeft = false;
