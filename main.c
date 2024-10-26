@@ -3,10 +3,10 @@
 int main(void)
 {
     // Initialization
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenWidth = 1280;
+    const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "raylib Starter Window");
+    InitWindow(screenWidth, screenHeight, "Game");
 
     SetTargetFPS(60); // Set FPS to 60 (frames per second)
 
