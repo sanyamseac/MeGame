@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "play.h"
 
 int main(void)
 {
@@ -6,22 +7,25 @@ int main(void)
     const int screenWidth = 720;
     const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "Game");
+    InitWindow(screenWidth, screenHeight, "Main Menu");
 
-    SetTargetFPS(60); // Set FPS to 60 (frames per second)
+    SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
-    // Main game loop
+    // Main menu loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
         // Update
-        // Here, you can update variables, check for input, etc.
+        if (IsKeyPressed(KEY_ENTER)) 
+        {
+            RunGame(); // Call the game function from play.c
+        }
 
         // Draw
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
-        DrawText("Hello, raylib!", 190, 200, 20, LIGHTGRAY);
+        DrawText("Press ENTER to Play", screenWidth/2 - MeasureText("Press ENTER to Play", 20)/2, screenHeight/2 - 10, 20, LIGHTGRAY);
 
         EndDrawing();
     }
