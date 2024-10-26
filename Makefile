@@ -14,7 +14,8 @@ ifeq ($(OS),Windows_NT)
     TARGET_EXT = .exe
 else
     # Linux-specific linker flags
-	LIBDIR = lib_linux/raylib
+    
+	LIBDIR = lib_linux/
     LDFLAGS = -L$(LIBDIR) -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
     TARGET_EXT =    # No extension for Linux
 endif
