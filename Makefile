@@ -21,8 +21,8 @@ else
 endif
 
 # Main target
-$(TARGET)$(TARGET_EXT): main.c
-	$(CC) main.c -o $(TARGET)$(TARGET_EXT) $(CFLAGS) $(LDFLAGS)
+$(TARGET)$(TARGET_EXT): *.c
+	$(CC) *.c -o $(TARGET)$(TARGET_EXT) $(CFLAGS) $(LDFLAGS)
 
 # Clean build files
 clean:
