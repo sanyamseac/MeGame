@@ -1,9 +1,9 @@
 #include "raylib.h"
-#include <stdlib.h> // For rand() and srand()
-#include <math.h>   // For atan2f()
-#include <time.h>   // For time()
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
 
-#define MAX_COINS 50
+#define MAX_COINS 50 // Define maximum number of coins
 #define PLAYER_SPEED 0.025f // Define player speed for lerp
 #define ROTATION_SPEED 0.06f // Define rotation speed for lerp
 
@@ -28,7 +28,7 @@ typedef struct Player {
 // Function declarations
 void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D *visibilityCone, Texture2D candyTextures[], Sound *coinSound, int playerChoice);
 void UpdateGame(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Sound coinSound);
-void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D visibilityCone);
+void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, int screenHeight, Texture2D visibilityCircle, Texture2D visibilityCone);
 void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[]);
 void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize);
 void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSound);
@@ -38,6 +38,7 @@ void DrawPlayer(Player player);
 void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibilityCircle);
 void DrawPlayerCone(Vector2 playerPosition, float rotation, Texture2D visibilityCone);
 int ShowMenu(int screenWidth, int screenHeight);
+void ShowLoadingScreen(void);
 
 void RunGame(void)
 {
@@ -56,7 +57,7 @@ void RunGame(void)
     Texture2D candyTextures[3];
     Sound coinSound;
 
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    InitWindow(screenWidth, screenHeight, "Play");
 
     int playerChoice = ShowMenu(screenWidth, screenHeight);
 
@@ -70,7 +71,7 @@ void RunGame(void)
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
         UpdateGame(player, &camera, screenWidth, screenHeight, boundarySize, coins, &score, coinSound);
-        DrawGame(player, camera, boundarySize, coins, score, screenWidth, visibilityCircle, visibilityCone);
+        DrawGame(player, camera, boundarySize, coins, score, screenWidth, screenHeight, visibilityCircle, visibilityCone);
     }
 
     // De-Initialization
@@ -88,9 +89,19 @@ void RunGame(void)
     CloseWindow(); // Close window and OpenGL context
 }
 
+void ShowLoadingScreen(void)
+{
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+    DrawText("Loading...", 350, 360, 20, DARKGRAY);
+    EndDrawing();
+}
+
 int ShowMenu(int screenWidth, int screenHeight)
 {
     int choice = -1;
+    Rectangle mainCharButton = { screenWidth / 2 - 100, screenHeight / 2, 200, 50 };
+    Rectangle ghostButton = { screenWidth / 2 - 100, screenHeight / 2 + 60, 200, 50 };
 
     while (choice == -1 && !WindowShouldClose())
     {
@@ -98,11 +109,28 @@ int ShowMenu(int screenWidth, int screenHeight)
         ClearBackground(RAYWHITE);
 
         DrawText("Choose your character:", screenWidth / 2 - MeasureText("Choose your character:", 20) / 2, screenHeight / 2 - 50, 20, DARKGRAY);
-        DrawText("1. Main Character", screenWidth / 2 - MeasureText("1. Main Character", 20) / 2, screenHeight / 2, 20, DARKGRAY);
-        DrawText("2. Ghost", screenWidth / 2 - MeasureText("2. Ghost", 20) / 2, screenHeight / 2 + 30, 20, DARKGRAY);
 
-        if (IsKeyPressed(KEY_ONE)) choice = 0;
-        if (IsKeyPressed(KEY_TWO)) choice = 1;
+        if (CheckCollisionPointRec(GetMousePosition(), mainCharButton))
+        {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) choice = 0;
+            DrawRectangleRec(mainCharButton, LIGHTGRAY);
+        }
+        else
+        {
+            DrawRectangleRec(mainCharButton, GRAY);
+        }
+        DrawText("Main Character", mainCharButton.x + 20, mainCharButton.y + 15, 20, DARKGRAY);
+
+        if (CheckCollisionPointRec(GetMousePosition(), ghostButton))
+        {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) choice = 1;
+            DrawRectangleRec(ghostButton, LIGHTGRAY);
+        }
+        else
+        {
+            DrawRectangleRec(ghostButton, GRAY);
+        }
+        DrawText("Ghost", ghostButton.x + 70, ghostButton.y + 15, 20, DARKGRAY);
 
         EndDrawing();
     }
@@ -112,6 +140,8 @@ int ShowMenu(int screenWidth, int screenHeight)
 
 void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D *visibilityCone, Texture2D candyTextures[], Sound *coinSound, int playerChoice)
 {
+    ShowLoadingScreen();
+
     InitAudioDevice(); // Initialize audio device
     SetMasterVolume(1.0f); // Set the master volume to maximum
 
@@ -183,6 +213,30 @@ void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[])
     }
 }
 
+void CheckGameEnd(Player *player, int score, int screenWidth, int screenHeight)
+{
+    if (score >= MAX_COINS)
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        if (player->canCollectCoins)
+        {
+            DrawText("Victory! Main Character Wins!", screenWidth / 2 - MeasureText("Victory! Main Character Wins!", 20) / 2, screenHeight / 2, 20, DARKGRAY);
+        }
+        else
+        {
+            DrawText("Game Over! Ghost Loses!", screenWidth / 2 - MeasureText("Game Over! Ghost Loses!", 20) / 2, screenHeight / 2, 20, DARKGRAY);
+        }
+
+        EndDrawing();
+
+        // Wait for a few seconds before closing the window
+        WaitTime(7.0f);
+        CloseWindow();
+    }
+}
+
 void UpdateGame(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Sound coinSound)
 {
     // Update player position
@@ -200,6 +254,9 @@ void UpdateGame(Player *player, Camera2D *camera, int screenWidth, int screenHei
 
     // Check for collisions with coins for the player
     CheckCoinCollisions(player, coins, score, coinSound);
+
+    // Check if the game has ended
+    CheckGameEnd(player, *score, screenWidth, screenHeight);
 }
 
 void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize)
@@ -273,12 +330,24 @@ void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSou
     }
 }
 
-void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D visibilityCone)
+void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, int screenHeight, Texture2D visibilityCircle, Texture2D visibilityCone)
 {
+    static Texture2D background = { 0 };
+    if (background.id == 0) {
+        background = LoadTexture("assets/Others/BackgroundTile.png");
+    }
+
     BeginDrawing();
-    ClearBackground(DARKGRAY);
+    ClearBackground(RAYWHITE);
 
     BeginMode2D(camera);
+
+    // Draw background tiles fixed to the world map
+    for (int y = 0; y < boundarySize; y += background.height) {
+        for (int x = 0; x < boundarySize; x += background.width) {
+            DrawTexture(background, x, y, WHITE);
+        }
+    }
 
     // Draw boundary
     DrawBoundary(boundarySize);
@@ -298,6 +367,7 @@ void DrawGame(Player *player, Camera2D camera, int boundarySize, Coin coins[], i
     }
 
     EndMode2D();
+
     // Draw score
     static Texture2D candyIcon = { 0 };
     if (candyIcon.id == 0) {
@@ -319,10 +389,18 @@ void DrawBoundary(int boundarySize)
 
 void DrawCoins(Coin coins[])
 {
+    static Texture2D glow = { 0 };
+    if (glow.id == 0) {
+        glow = LoadTexture("assets/Props/glow.png");
+    }
+
     for (int i = 0; i < MAX_COINS; i++)
     {
         if (!coins[i].collected)
         {
+            // Draw glow behind the coin
+            DrawTextureEx(glow, (Vector2){coins[i].position.x - glow.width * 0.05f / 2 + (rand() % 4 + 12), coins[i].position.y - glow.height * 0.05f / 2 + (rand() % 4 + 12)}, 0.0f, 0.05f, WHITE); // Scale down by 0.05 (20 times smaller)
+            // Draw the coin
             DrawTextureEx(coins[i].texture, coins[i].position, 0.0f, 0.1f, WHITE); // Scale down by 0.1 (10 times smaller)
         }
     }
