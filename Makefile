@@ -1,21 +1,28 @@
 # Compiler and flags
 CC = gcc
 CFLAGS = -Og -Wall -Wno-missing-braces -Iinclude
-LDFLAGS = -Llib/raylib -lraylib -lopengl32 -lgdi32 -lwinmm
 
-# Target executable
-TARGET = main.exe
+# Paths
 
-# Source files
-SRC = main.c
+TARGET = main
 
-# Default target
-all: $(TARGET)
+# Detect OS and set linker flags
+ifeq ($(OS),Windows_NT)
+    # Windows-specific linker flags
+	LIBDIR = lib/raylib
+    LDFLAGS = -L$(LIBDIR) -lraylib -lopengl32 -lgdi32 -lwinmm
+    TARGET_EXT = .exe
+else
+    # Linux-specific linker flags
+	LIBDIR = lib_linux/raylib
+    LDFLAGS = -L$(LIBDIR) -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+    TARGET_EXT =    # No extension for Linux
+endif
 
-# Compile target
-$(TARGET): $(SRC)
-	$(CC) $(SRC) -o $(TARGET) $(CFLAGS) $(LDFLAGS)
+# Main target
+$(TARGET)$(TARGET_EXT): main.c
+	$(CC) main.c -o $(TARGET)$(TARGET_EXT) $(CFLAGS) $(LDFLAGS)
 
 # Clean build files
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET)$(TARGET_EXT)
