@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -O3 -Wall -Wno-missing-braces -Iinclude
+CFLAGS = -O3 -Wall -Wno-missing-braces -Iinclude -Iinclude/external
 
 # Paths
 
