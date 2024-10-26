@@ -12,17 +12,27 @@ typedef struct Coin {
     Texture2D texture;
 } Coin;
 
+// Structure for player
+typedef struct Player {
+    Vector2 position;
+    Vector2 targetPosition;
+    Texture2D textures[4];
+    Texture2D currentTexture;
+    bool canCollectCoins;
+} Player;
+
 // Function declarations
-void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *playerPosition, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Texture2D playerTextures[], Sound *coinSound);
-void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Texture2D playerTextures[], Texture2D *currentPlayerTexture, Sound coinSound);
-void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D currentPlayerTexture);
+void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Sound *coinSound);
+void UpdateGame(Player *mainChar, Player *ghost, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Sound coinSound);
+void DrawGame(Player mainChar, Player ghost, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle);
 void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[]);
-void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Texture2D playerTextures[], Texture2D *currentPlayerTexture);
-void CheckCoinCollisions(Vector2 playerPosition, Coin coins[], int *score, Sound coinSound);
+void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize);
+void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSound);
 void DrawBoundary(int boundarySize);
 void DrawCoins(Coin coins[]);
-void DrawPlayer(Vector2 playerPosition, Texture2D currentPlayerTexture);
+void DrawPlayer(Player player);
 void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibilityCircle);
+int ShowMenu(int screenWidth, int screenHeight);
 
 void RunGame(void)
 {
@@ -31,28 +41,32 @@ void RunGame(void)
     const int screenHeight = 720;
     const int boundarySize = 2000; // Size of the boundaries
 
-    Vector2 playerPosition = { 0 };
-    Vector2 targetPosition = { 0 };
+    Player mainChar = { 0 };
+    Player ghost = { 0 };
     Camera2D camera = { 0 };
     Coin coins[MAX_COINS] = { 0 };
     int score = 0;
     Texture2D visibilityCircle;
     Texture2D candyTextures[3];
-    Texture2D playerTextures[4];
-    Texture2D currentPlayerTexture;
     Sound coinSound;
 
-    InitGame(screenWidth, screenHeight, boundarySize, &playerPosition, &camera, coins, &score, &visibilityCircle, candyTextures, playerTextures, &coinSound);
-    targetPosition = playerPosition;
-    currentPlayerTexture = playerTextures[2]; // Initial player texture (standing still after moving left)
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+
+    int playerChoice = ShowMenu(screenWidth, screenHeight);
+
+    InitGame(screenWidth, screenHeight, boundarySize, &mainChar, &ghost, &camera, coins, &score, &visibilityCircle, candyTextures, &coinSound);
+    mainChar.targetPosition = mainChar.position;
+    ghost.targetPosition = ghost.position;
+
+    Player *player = (playerChoice == 0) ? &mainChar : &ghost;
 
     SetTargetFPS(60); // Set our game to run at 60 frames-per-second
 
     // Main game loop
     while (!WindowShouldClose()) // Detect window close button or ESC key
     {
-        UpdateGame(&playerPosition, &targetPosition, &camera, screenWidth, screenHeight, boundarySize, coins, &score, playerTextures, &currentPlayerTexture, coinSound);
-        DrawGame(playerPosition, camera, boundarySize, coins, score, screenWidth, visibilityCircle, currentPlayerTexture);
+        UpdateGame(player, &ghost, &camera, screenWidth, screenHeight, boundarySize, coins, &score, coinSound);
+        DrawGame(mainChar, ghost, camera, boundarySize, coins, score, screenWidth, visibilityCircle);
     }
 
     // De-Initialization
@@ -61,21 +75,44 @@ void RunGame(void)
         UnloadTexture(candyTextures[i]); // Unload candy textures
     }
     for (int i = 0; i < 4; i++) {
-        UnloadTexture(playerTextures[i]); // Unload player textures
+        UnloadTexture(mainChar.textures[i]); // Unload main character textures
+        UnloadTexture(ghost.textures[i]); // Unload ghost textures
     }
     UnloadSound(coinSound); // Unload sound
     CloseAudioDevice(); // Close audio device
     CloseWindow(); // Close window and OpenGL context
 }
 
-void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *playerPosition, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Texture2D playerTextures[], Sound *coinSound)
+int ShowMenu(int screenWidth, int screenHeight)
 {
-    InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
+    int choice = -1;
+
+    while (choice == -1 && !WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+
+        DrawText("Choose your character:", screenWidth / 2 - MeasureText("Choose your character:", 20) / 2, screenHeight / 2 - 50, 20, DARKGRAY);
+        DrawText("1. Main Character", screenWidth / 2 - MeasureText("1. Main Character", 20) / 2, screenHeight / 2, 20, DARKGRAY);
+        DrawText("2. Ghost", screenWidth / 2 - MeasureText("2. Ghost", 20) / 2, screenHeight / 2 + 30, 20, DARKGRAY);
+
+        if (IsKeyPressed(KEY_ONE)) choice = 0;
+        if (IsKeyPressed(KEY_TWO)) choice = 1;
+
+        EndDrawing();
+    }
+
+    return choice;
+}
+
+void InitGame(int screenWidth, int screenHeight, int boundarySize, Player *mainChar, Player *ghost, Camera2D *camera, Coin coins[], int *score, Texture2D *visibilityCircle, Texture2D candyTextures[], Sound *coinSound)
+{
     InitAudioDevice(); // Initialize audio device
     SetMasterVolume(1.0f); // Set the master volume to maximum
 
-    *playerPosition = (Vector2){ (float)screenWidth / 2, (float)screenHeight / 2 };
-    camera->target = *playerPosition;
+    mainChar->position = (Vector2){ (float)screenWidth / 2, (float)screenHeight / 2 };
+    ghost->position = (Vector2){ (float)screenWidth / 2 + 50, (float)screenHeight / 2 + 50 };
+    camera->target = mainChar->position;
     camera->offset = (Vector2){ screenWidth / 2, screenHeight / 2 };
     camera->zoom = 1.0f;
 
@@ -83,15 +120,25 @@ void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *play
     srand(time(NULL));
 
     // Load candy textures
-    candyTextures[0] = LoadTexture("assets/Candy_1.png");
-    candyTextures[1] = LoadTexture("assets/Candy_2.png");
-    candyTextures[2] = LoadTexture("assets/Candy_3.png");
+    candyTextures[0] = LoadTexture("assets/Props/Candy_1.png");
+    candyTextures[1] = LoadTexture("assets/Props/Candy_2.png");
+    candyTextures[2] = LoadTexture("assets/Props/Candy_3.png");
 
-    // Load player textures
-    playerTextures[0] = LoadTexture("assets/G_Left.png");
-    playerTextures[1] = LoadTexture("assets/G_Right.png");
-    playerTextures[2] = LoadTexture("assets/G_Still_after_left.png");
-    playerTextures[3] = LoadTexture("assets/G_Still_after_right.png");
+    // Load main character textures
+    mainChar->textures[0] = LoadTexture("assets/Characters/Main_Char_Left.png");
+    mainChar->textures[1] = LoadTexture("assets/Characters/Main_Char_Right.png");
+    mainChar->textures[2] = LoadTexture("assets/Characters/Main_Char_Still_after_Left.png");
+    mainChar->textures[3] = LoadTexture("assets/Characters/Main_Char_Still_after_Right.png");
+    mainChar->currentTexture = mainChar->textures[2]; // Initial texture
+    mainChar->canCollectCoins = true;
+
+    // Load ghost textures
+    ghost->textures[0] = LoadTexture("assets/Characters/G_Left.png");
+    ghost->textures[1] = LoadTexture("assets/Characters/G_Right.png");
+    ghost->textures[2] = LoadTexture("assets/Characters/G_Still_after_left.png");
+    ghost->textures[3] = LoadTexture("assets/Characters/G_Still_after_right.png");
+    ghost->currentTexture = ghost->textures[2]; // Initial texture
+    ghost->canCollectCoins = false;
 
     // Initialize coins at random positions
     InitCoins(coins, boundarySize, candyTextures);
@@ -99,7 +146,7 @@ void InitGame(int screenWidth, int screenHeight, int boundarySize, Vector2 *play
     *score = 0;
 
     // Load visibility circle texture
-    *visibilityCircle = LoadTexture("assets/BlackVisibilityCircle.png");
+    *visibilityCircle = LoadTexture("assets/Others/BlackVisibilityCircle.png");
 
     // Load coin sound
     *coinSound = LoadSound("assets/audio/game-bonus.mp3");
@@ -115,14 +162,15 @@ void InitCoins(Coin coins[], int boundarySize, Texture2D candyTextures[])
     }
 }
 
-void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Texture2D playerTextures[], Texture2D *currentPlayerTexture, Sound coinSound)
+void UpdateGame(Player *mainChar, Player *ghost, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Coin coins[], int *score, Sound coinSound)
 {
-    // Update player position
-    UpdatePlayerPosition(playerPosition, targetPosition, camera, screenWidth, screenHeight, boundarySize, playerTextures, currentPlayerTexture);
+    // Update player positions
+    UpdatePlayerPosition(mainChar, camera, screenWidth, screenHeight, boundarySize);
+    UpdatePlayerPosition(ghost, camera, screenWidth, screenHeight, boundarySize);
 
-    // Lerp camera to follow the player with some offset
-    camera->target.x += (playerPosition->x - camera->target.x) * 0.1f;
-    camera->target.y += (playerPosition->y - camera->target.y) * 0.1f;
+    // Lerp camera to follow the main character with some offset
+    camera->target.x += (mainChar->position.x - camera->target.x) * 0.1f;
+    camera->target.y += (mainChar->position.y - camera->target.y) * 0.1f;
 
     // Ensure camera doesn't move past the boundaries
     if (camera->target.x < screenWidth / 2) camera->target.x = screenWidth / 2;
@@ -130,43 +178,43 @@ void UpdateGame(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *came
     if (camera->target.x > boundarySize - screenWidth / 2) camera->target.x = boundarySize - screenWidth / 2;
     if (camera->target.y > boundarySize - screenHeight / 2) camera->target.y = boundarySize - screenHeight / 2;
 
-    // Check for collisions with coins
-    CheckCoinCollisions(*playerPosition, coins, score, coinSound);
+    // Check for collisions with coins for main character
+    CheckCoinCollisions(mainChar, coins, score, coinSound);
 }
 
-void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize, Texture2D playerTextures[], Texture2D *currentPlayerTexture)
+void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int screenHeight, int boundarySize)
 {
     static bool movingLeft = false;
     static bool movingRight = false;
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
     {
-        *targetPosition = GetMousePosition();
-        targetPosition->x += camera->target.x - screenWidth / 2;
-        targetPosition->y += camera->target.y - screenHeight / 2;
+        player->targetPosition = GetMousePosition();
+        player->targetPosition.x += camera->target.x - screenWidth / 2;
+        player->targetPosition.y += camera->target.y - screenHeight / 2;
     }
 
     // Lerp player position towards target position
-    float prevX = playerPosition->x;
-    playerPosition->x += (targetPosition->x - playerPosition->x) * PLAYER_SPEED;
-    playerPosition->y += (targetPosition->y - playerPosition->y) * PLAYER_SPEED;
+    float prevX = player->position.x;
+    player->position.x += (player->targetPosition.x - player->position.x) * PLAYER_SPEED;
+    player->position.y += (player->targetPosition.y - player->position.y) * PLAYER_SPEED;
 
     // Ensure player doesn't move past the boundaries
-    if (playerPosition->x < 10) playerPosition->x = 10;
-    if (playerPosition->y < 10) playerPosition->y = 10;
-    if (playerPosition->x > boundarySize - 10) playerPosition->x = boundarySize - 10;
-    if (playerPosition->y > boundarySize - 10) playerPosition->y = boundarySize - 10;
+    if (player->position.x < 10) player->position.x = 10;
+    if (player->position.y < 10) player->position.y = 10;
+    if (player->position.x > boundarySize - 10) player->position.x = boundarySize - 10;
+    if (player->position.y > boundarySize - 10) player->position.y = boundarySize - 10;
 
     // Update player texture based on movement
-    if ((playerPosition->x - prevX < -2))
+    if ((player->position.x - prevX < -2))
     {
-        *currentPlayerTexture = playerTextures[0]; // Moving left
+        player->currentTexture = player->textures[0]; // Moving left
         movingLeft = true;
         movingRight = false;
     }
-    else if ((playerPosition->x - prevX > 2))
+    else if ((player->position.x - prevX > 2))
     {
-        *currentPlayerTexture = playerTextures[1]; // Moving right
+        player->currentTexture = player->textures[1]; // Moving right
         movingLeft = false;
         movingRight = true;
     }
@@ -174,20 +222,22 @@ void UpdatePlayerPosition(Vector2 *playerPosition, Vector2 *targetPosition, Came
     {
         if (movingLeft)
         {
-            *currentPlayerTexture = playerTextures[2]; // Standing still after moving left
+            player->currentTexture = player->textures[2]; // Standing still after moving left
         }
         else if (movingRight)
         {
-            *currentPlayerTexture = playerTextures[3]; // Standing still after moving right
+            player->currentTexture = player->textures[3]; // Standing still after moving right
         }
     }
 }
 
-void CheckCoinCollisions(Vector2 playerPosition, Coin coins[], int *score, Sound coinSound)
+void CheckCoinCollisions(Player *player, Coin coins[], int *score, Sound coinSound)
 {
+    if (!player->canCollectCoins) return;
+
     for (int i = 0; i < MAX_COINS; i++)
     {
-        if (!coins[i].collected && CheckCollisionCircles(playerPosition, 20, (Vector2){coins[i].position.x + coins[i].texture.width / 20, coins[i].position.y + coins[i].texture.height / 20}, 1))
+        if (!coins[i].collected && CheckCollisionCircles(player->position, 20, (Vector2){coins[i].position.x + coins[i].texture.width / 20, coins[i].position.y + coins[i].texture.height / 20}, 1))
         {
             coins[i].collected = true;
             (*score)++;
@@ -196,7 +246,7 @@ void CheckCoinCollisions(Vector2 playerPosition, Coin coins[], int *score, Sound
     }
 }
 
-void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle, Texture2D currentPlayerTexture)
+void DrawGame(Player mainChar, Player ghost, Camera2D camera, int boundarySize, Coin coins[], int score, int screenWidth, Texture2D visibilityCircle)
 {
     BeginDrawing();
     ClearBackground(DARKGRAY);
@@ -209,12 +259,13 @@ void DrawGame(Vector2 playerPosition, Camera2D camera, int boundarySize, Coin co
     // Draw coins
     DrawCoins(coins);
 
-    // Draw player character
-    DrawPlayer(playerPosition, currentPlayerTexture);
+    // Draw players
+    DrawPlayer(mainChar);
+    DrawPlayer(ghost);
 
-    // Draw thin black circle around the player
-    float radius = 15*(150 + (score * (screenWidth / 2 - 150) / MAX_COINS));
-    DrawPlayerCircle(playerPosition, radius, visibilityCircle);
+    // Draw thin black circle around the main character
+    float radius = 15 * (150 + (score * (screenWidth / 2 - 150) / MAX_COINS));
+    DrawPlayerCircle(mainChar.position, radius, visibilityCircle);
 
     EndMode2D();
 
@@ -243,9 +294,9 @@ void DrawCoins(Coin coins[])
     }
 }
 
-void DrawPlayer(Vector2 playerPosition, Texture2D currentPlayerTexture)
+void DrawPlayer(Player player)
 {
-    DrawTextureEx(currentPlayerTexture, (Vector2){playerPosition.x - currentPlayerTexture.width * 0.1f / 2, playerPosition.y - currentPlayerTexture.height * 0.1f / 2}, 0.0f, 0.1f, WHITE); // Scale down by 0.1 (10 times smaller)
+    DrawTextureEx(player.currentTexture, (Vector2){player.position.x - player.currentTexture.width * 0.1f / 2, player.position.y - player.currentTexture.height * 0.1f / 2}, 0.0f, 0.1f, WHITE); // Scale down by 0.1 (10 times smaller)
 }
 
 void DrawPlayerCircle(Vector2 playerPosition, float radius, Texture2D visibilityCircle)
