@@ -1,14 +1,14 @@
 # The Last Treat!
 This is the Megathon'24 project by Machine AI'nt Learning team, based on OSDG problem.
 
-We have Conceptualized a Game of 1 Ghost Player and multiple Charecter Players trying to survive:
-- Charecters : Has to collect all the TRICK or TREAT candies
+We have Conceptualized a Game of 1 Ghost Player and multiple Characters (Players) trying to survive:
+- Characters : Has to collect all the TRICK or TREAT candies
 - Ghost : Has to kill all players
 
 
 https://github.com/user-attachments/assets/d6dca4f0-e6f4-4cc8-9c46-6a8e1310d1ab
 
-### The Charecter has limited area of vision, making the game spooky. The vision increases as players collect more and more Candy, Once they collect all the candies they win.
+### The Characters have a limited area of vision, making the game spooky. The vision increases as players collect more and more Candy, Once they collect all the candies they win.
 
 https://github.com/user-attachments/assets/24c734b8-1328-44a5-9701-b3cb0288928e
 
@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/24c734b8-1328-44a5-9701-b3cb0288928e
 
 =======
 
-We have used few open sources free to use online resourses, or resourses with MIT lisence. Mostly Art was made internally, using Krita, Paint, Bandlabs, etc.
+We have used some open sourced projects, free to use online resources & resources under MIT license. Mostly Art was made internally, using Krita, Paint, Bandlabs, etc.
 40-50% Code was written with Github Copilot Enabled to assist Debugging and Templating.
 
 =======
