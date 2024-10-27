@@ -274,6 +274,12 @@ void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int
         Vector2 direction = { player->targetPosition.x - player->position.x, player->targetPosition.y - player->position.y };
         player->targetRotation = atan2f(direction.y, direction.x) * (180.0f / PI);
     }
+    static Sound walkingSound = { 0 };
+    static bool isWalkingSoundPlaying = false;
+
+    if (walkingSound.frameCount == 0) {
+        walkingSound = LoadSound("assets/audio/strange-notification-36458.mp3");
+    }
 
     // Lerp player position towards target position
     float prevX = player->position.x;
@@ -292,12 +298,20 @@ void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int
         player->currentTexture = player->textures[0]; // Moving left
         movingLeft = true;
         movingRight = false;
+        if (!isWalkingSoundPlaying) {
+            PlaySound(walkingSound);
+            isWalkingSoundPlaying = true;
+        }
     }
     else if ((player->position.x - prevX > 2))
     {
         player->currentTexture = player->textures[1]; // Moving right
         movingLeft = false;
         movingRight = true;
+        if (!isWalkingSoundPlaying) {
+            PlaySound(walkingSound);
+            isWalkingSoundPlaying = true;
+        }
     }
     else
     {
@@ -308,6 +322,10 @@ void UpdatePlayerPosition(Player *player, Camera2D *camera, int screenWidth, int
         else if (movingRight)
         {
             player->currentTexture = player->textures[3]; // Standing still after moving right
+        }
+        if (isWalkingSoundPlaying) {
+            StopSound(walkingSound);
+            isWalkingSoundPlaying = false;
         }
     }
 
