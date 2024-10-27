@@ -5,7 +5,8 @@ We have Conceptualized a Game of 1 Ghost Player and multiple Charecter Players t
 - Charecters : Has to collect all the TRICK or TREAT candies
 - Ghost : Has to kill all players
 
-https://github.com/user-attachments/assets/5967173b-73c3-419c-88e9-8a1af1df6468
+
+https://github.com/user-attachments/assets/d6dca4f0-e6f4-4cc8-9c46-6a8e1310d1ab
 
 ### The Charecter has limited area of vision, making the game spooky. The vision increases as players collect more and more Candy, Once they collect all the candies they win.
 
