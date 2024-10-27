@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -O3 -Wall -Wno-missing-braces -Iinclude -Iinclude/external
+CFLAGS = -O3 -Wall -Wno-missing-braces -Iinclude -Iinclude/external -Ilib_socketyc
 
 # Paths
 
@@ -21,8 +21,8 @@ else
 endif
 
 # Main target
-$(TARGET)$(TARGET_EXT): *.c
-	$(CC) *.c -o $(TARGET)$(TARGET_EXT) $(CFLAGS) $(LDFLAGS)
+$(TARGET)$(TARGET_EXT): main.c
+	$(CC) main.c play.c lib_socketyC/client.c -o $(TARGET)$(TARGET_EXT) $(CFLAGS) $(LDFLAGS)
 
 # Clean build files
 clean:

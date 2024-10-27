@@ -33,7 +33,7 @@ int main(void)
 
         ClearBackground(RAYWHITE);
 
-        DrawText("Project MeGame", screenWidth/2 - MeasureText("Project MeGame", 40)/2, screenHeight/4, 40, DARKGRAY);
+        DrawText("The Last Treat", screenWidth/2 - MeasureText("The Last Treat", 40)/2, screenHeight/4, 40, DARKGRAY);
 
         if (buttonHovered)
         {
