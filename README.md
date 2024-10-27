@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/24c734b8-1328-44a5-9701-b3cb0288928e
 =======
 
 We have used few open sources free to use online resourses, or resourses with MIT lisence. Mostly Art was made internally, using Krita, Paint, Bandlabs, etc.
-40-50% Code was written with Github Copilot Enabled to assist.
+40-50% Code was written with Github Copilot Enabled to assist Debugging and Templating.
 
 =======
 
