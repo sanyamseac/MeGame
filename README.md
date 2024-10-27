@@ -1,4 +1,4 @@
-#The Last Treat!
+# The Last Treat!
 This is the Megathon'24 project by Machine AI'nt Learning team, based on OSDG problem.
 
 
